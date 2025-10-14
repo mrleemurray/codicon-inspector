@@ -1,0 +1,83 @@
+{
+  "name": "codicon-inspector",
+  "displayName": "Codicon Inspector",
+  "description": "Inspect and visualize all available VS Code codicons with SVG rendering",
+  "version": "0.0.1",
+  "publisher": "mrleemurray",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mrleemurray/codicon-inspector"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codicon-inspector.showCodicons",
+        "title": "Show Codicons Inspector",
+        "icon": "$(symbol-interface)"
+      },
+      {
+        "command": "codicon-inspector.refreshCodicons",
+        "title": "Refresh Codicons",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "codicon-inspector.showCodicons"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "codicon-inspector.showCodicons",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+alt+i"
+      }
+    ],
+    "configuration": {
+      "title": "Codicon Inspector",
+      "properties": {
+        "codicon-inspector.localCodiconsPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to local codicons folder containing CSS and font files (e.g., /path/to/codicons/dist). Leave empty to use bundled codicons."
+        },
+        "codicon-inspector.enableAutoRefresh": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically refresh the inspector when local codicons file changes"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "16.x",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.4.1",
+    "@typescript-eslint/parser": "^6.4.1",
+    "eslint": "^8.47.0",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.41"
+  }
+}
