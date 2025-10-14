@@ -286,17 +286,21 @@ class CodiconInspectorPanel {
             font-size: var(--vscode-font-size);
             color: var(--vscode-foreground);
             background-color: var(--vscode-editor-background);
-            padding: 20px;
+            padding: 0 20px 20px 20px;
             margin: 0;
         }
         
         .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: var(--vscode-editor-background);
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
             border-bottom: 1px solid var(--vscode-panel-border);
-            padding-bottom: 16px;
+            padding: 16px 0;
             gap: 16px;
         }
         
