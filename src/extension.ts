@@ -276,6 +276,7 @@ class CodiconInspectorPanel {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Codicon Inspector</title>
+    <script type="module" src="https://unpkg.com/@vscode/webview-ui-toolkit@latest/dist/toolkit.js"></script>
     <style>
         /* Embedded Codicon CSS */
         ${cssContent}
@@ -328,22 +329,7 @@ class CodiconInspectorPanel {
         }
         
         
-        .search-input {
-            width: 100%;
-            max-width: 300px;
-            min-width: 100px;
-            padding: 3px 0 3px 6px;
-            background-color: var(--vscode-input-background);
-            color: var(--vscode-input-foreground);
-            border: 1px solid var(--vscode-input-border);
-            border-radius: 2px;
-            font-size: 13px;
-        }
-        
-        .search-input:focus {
-            outline: none;
-            border-color: var(--vscode-focusBorder);
-        }
+
         
         .grid {
             display: grid;
@@ -443,41 +429,39 @@ class CodiconInspectorPanel {
             padding: 40px;
         }
         
-        .refresh-button {
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            padding: 6px 12px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.9em;
-            margin-left: 10px;
-        }
+
         
-        .refresh-button:hover {
-            background-color: var(--vscode-button-hoverBackground);
+        /* Bounding box styles */
+        .show-bounding-boxes .size-icon .codicon {
+            outline: 1px solid var(--vscode-editorError-foreground);
+            outline-offset: 0px;
         }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="search-container">
-            <input 
-                type="text" 
-                class="search-input" 
+            <vscode-text-field 
                 placeholder="Search codicons... (e.g., 'file', 'folder', 'git')"
                 id="search-input"
-            />
+                style="width: 400px;">
+            </vscode-text-field>
         </div>
         <div class="info">
-            <div class="stats">
-                Displaying <span id="total-count">${codicons.length}</span> available codicons
-                <span class="css-source" style="margin-left: 10px; font-size: 0.8em; opacity: 0.7;">
-                    (${cssSource === 'local' ? 'Local: ' + path.basename(localCodiconsPath) + ' (TTF fonts)' : 'Bundled'})
-                </span>
-                <button class="refresh-button" onclick="refreshCodicons()">
+            <div class="controls" style="display: inline-flex; align-items: center; gap: 15px;">
+                <div class="info-container" style="display: flex; align-items: center; gap: 8px;">
+                    <i class="codicon codicon-info" 
+                       id="stats-info" 
+                       style="cursor: help; color: var(--vscode-foreground);"
+                       title="Displaying ${codicons.length} available codicons (${cssSource === 'local' ? 'Local: ' + path.basename(localCodiconsPath) + ' (TTF fonts)' : 'Bundled'})">
+                    </i>
+                </div>
+                <vscode-checkbox id="bounding-box-toggle">
+                    Show Bounding Boxes
+                </vscode-checkbox>
+                <vscode-button id="refresh-button">
                     Refresh
-                </button>
+                </vscode-button>
             </div>
         </div>
     </div>
@@ -530,6 +514,17 @@ class CodiconInspectorPanel {
         
         function updateStats() {
             totalCount.textContent = filteredCount;
+            
+            // Update the tooltip with current filter info
+            const statsInfo = document.getElementById('stats-info');
+            const totalIcons = allItems.length;
+            const sourceText = '${cssSource === 'local' ? 'Local: ' + path.basename(localCodiconsPath) + ' (TTF fonts)' : 'Bundled'}';
+            
+            if (filteredCount === totalIcons) {
+                statsInfo.title = \`Displaying \${totalIcons} available codicons (\${sourceText})\`;
+            } else {
+                statsInfo.title = \`Showing \${filteredCount} of \${totalIcons} codicons (filtered) - Source: \${sourceText}\`;
+            }
         }
         
         function filterCodicons(searchTerm) {
@@ -630,10 +625,27 @@ class CodiconInspectorPanel {
             }
         }, 1000);
         
-        // Refresh function for the button
-        window.refreshCodicons = function() {
+        // Refresh button functionality
+        const refreshButton = document.getElementById('refresh-button');
+        refreshButton.addEventListener('click', () => {
             vscode.postMessage({ command: 'refresh' });
-        };
+        });
+        
+        // Bounding box toggle functionality
+        const boundingBoxToggle = document.getElementById('bounding-box-toggle');
+        
+        boundingBoxToggle.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            const body = document.body;
+            
+            if (isChecked) {
+                body.classList.add('show-bounding-boxes');
+            } else {
+                body.classList.remove('show-bounding-boxes');
+            }
+            
+            console.log('Bounding boxes:', isChecked ? 'enabled' : 'disabled');
+        });
         
         // Focus search input on load
         searchInput.focus();
