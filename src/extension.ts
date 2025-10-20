@@ -647,8 +647,10 @@ class CodiconInspectorPanel {
             console.log('Bounding boxes:', isChecked ? 'enabled' : 'disabled');
         });
         
-        // Focus search input on load
-        searchInput.focus();
+        // Focus search input on load - use setTimeout to ensure webview is fully loaded
+        setTimeout(() => {
+            searchInput.focus();
+        }, 100);
     </script>
 </body>
 </html>`;
