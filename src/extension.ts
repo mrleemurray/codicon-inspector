@@ -299,8 +299,6 @@ class CodiconInspectorPanel {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
-            border-bottom: 1px solid var(--vscode-panel-border);
             padding: 16px 0;
             gap: 16px;
         }
@@ -328,9 +326,179 @@ class CodiconInspectorPanel {
             flex-grow: 1;
         }
         
+        /* Comparison Panel Styles */
+        .comparison-panel {
+            position: sticky;
+            top: 60px;
+            z-index: 99;
+            background-color: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
         
+        .comparison-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: var(--vscode-editorGroupHeader-tabsBackground);
+            border-bottom: 1px solid var(--vscode-panel-border);
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .comparison-header:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+        
+        .comparison-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            color: var(--vscode-foreground);
+        }
+        
+        .comparison-count {
+            background-color: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 11px;
+            min-width: 16px;
+            text-align: center;
+        }
+        
+        .comparison-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .chevron {
+            transition: transform 0.2s ease;
+        }
+        
+        .comparison-panel.collapsed .chevron {
+            transform: rotate(-90deg);
+        }
+        
+        .comparison-content {
+            padding: 12px;
+            max-height: 200px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+        
+        .comparison-panel.collapsed .comparison-content {
+            max-height: 0;
+            padding: 0 12px;
+        }
+        
+        .comparison-area {
+            min-height: 40px;
+            border: 2px dashed var(--vscode-editorWidget-border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 12px;
+            flex-wrap: wrap;
+            position: relative;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+        
+        .comparison-area.drag-over {
+            border-color: var(--vscode-focusBorder);
+            background-color: var(--vscode-list-dropBackground);
+        }
+        
+        .comparison-area.empty::before {
+            content: "Drag icons here to compare (max 30 icons)";
+            color: var(--vscode-descriptionForeground);
+            font-style: italic;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        
+        .comparison-icon {
+            position: relative;
+            cursor: grab;
+            color: var(--vscode-icon-foreground);
+            font-size: 16px;
+            line-height: 1;
+            transition: opacity 0.2s ease, transform 0.1s ease, font-size 0.1s ease;
+            user-select: none;
+        }
+        
+        .comparison-icon:hover {
+            opacity: 0.7;
+            transform: translateY(-1px);
+        }
+        
+        .comparison-icon:active {
+            cursor: grabbing;
+        }
+        
+        .comparison-icon.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+        
+        .comparison-icon.drag-over {
+            transform: translateX(8px);
+        }
+        
+        .comparison-icon-remove {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: var(--vscode-errorForeground);
+            color: var(--vscode-editor-background);
+            border: none;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            font-size: 9px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            line-height: 1;
+        }
+        
+        .comparison-icon:hover .comparison-icon-remove {
+            opacity: 1;
+        }
+        
+        /* Make all size icons draggable */
+        .size-icon {
+            cursor: grab;
+            transition: transform 0.1s ease, background-color 0.1s ease;
+            border-radius: 2px;
+            padding: 2px;
+        }
+        
+        .size-icon:hover {
+            background-color: var(--vscode-list-hoverBackground);
+            transform: scale(1.1);
+        }
+        
+        .size-icon:active {
+            cursor: grabbing;
+        }
+        
+        .size-icon.dragging {
+            opacity: 0.5;
+        }
 
-        
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -466,6 +634,30 @@ class CodiconInspectorPanel {
         </div>
     </div>
 
+    <!-- Comparison Panel -->
+    <div class="comparison-panel" id="comparison-panel">
+        <div class="comparison-header" id="comparison-header">
+            <div class="comparison-title">
+                <i class="codicon codicon-compare"></i>
+                Icon comparison
+                <span class="comparison-count" id="comparison-count">0</span>
+            </div>
+            <div class="comparison-controls">
+                <vscode-button appearance="icon" id="size-cycle" title="Cycle font size (16px)">
+                    <i class="codicon codicon-text-size"></i>
+                </vscode-button>
+                <vscode-button appearance="icon" id="clear-comparison" title="Clear all icons">
+                    <i class="codicon codicon-clear-all"></i>
+                </vscode-button>
+                <i class="codicon codicon-chevron-down chevron" id="comparison-chevron"></i>
+            </div>
+        </div>
+        <div class="comparison-content" id="comparison-content">
+            <div class="comparison-area empty" id="comparison-area">
+                <!-- Comparison icons will be added here -->
+            </div>
+        </div>
+    </div>
     
     <div class="grid" id="codicon-grid">
         ${codicons.map(codicon => `
@@ -473,25 +665,25 @@ class CodiconInspectorPanel {
                 <div class="codicon-display">
                     <div class="size-row">
                         <div class="size-sample">
-                            <div class="size-icon size-11">
+                            <div class="size-icon size-11" draggable="true" data-codicon="${codicon}">
                                 <i class="codicon codicon-${codicon}"></i>
                             </div>
                             <span class="size-label">11px</span>
                         </div>
                         <div class="size-sample">
-                            <div class="size-icon size-14">
+                            <div class="size-icon size-14" draggable="true" data-codicon="${codicon}">
                                 <i class="codicon codicon-${codicon}"></i>
                             </div>
                             <span class="size-label">14px</span>
                         </div>
                         <div class="size-sample">
-                            <div class="size-icon size-16">
+                            <div class="size-icon size-16" draggable="true" data-codicon="${codicon}">
                                 <i class="codicon codicon-${codicon}"></i>
                             </div>
                             <span class="size-label">16px</span>
                         </div>
                         <div class="size-sample">
-                            <div class="size-icon size-24">
+                            <div class="size-icon size-24" draggable="true" data-codicon="${codicon}">
                                 <i class="codicon codicon-${codicon}"></i>
                             </div>
                             <span class="size-label">24px</span>
@@ -507,14 +699,28 @@ class CodiconInspectorPanel {
         const vscode = acquireVsCodeApi();
         const searchInput = document.getElementById('search-input');
         const codiconGrid = document.getElementById('codicon-grid');
-        const totalCount = document.getElementById('total-count');
         const allItems = Array.from(document.querySelectorAll('.codicon-item'));
+        
+        // Comparison functionality
+        const comparisonPanel = document.getElementById('comparison-panel');
+        const comparisonHeader = document.getElementById('comparison-header');
+        const comparisonContent = document.getElementById('comparison-content');
+        const comparisonArea = document.getElementById('comparison-area');
+        const comparisonCount = document.getElementById('comparison-count');
+        const comparisonChevron = document.getElementById('comparison-chevron');
+        const clearButton = document.getElementById('clear-comparison');
+        const sizeCycleButton = document.getElementById('size-cycle');
+        
+        let comparisonIcons = [];
+        const MAX_COMPARISON_ICONS = 30;
+        
+        // Font size cycling
+        const fontSizes = [11, 14, 16, 24];
+        let currentSizeIndex = 2; // Start with 16px
         
         let filteredCount = allItems.length;
         
         function updateStats() {
-            totalCount.textContent = filteredCount;
-            
             // Update the tooltip with current filter info
             const statsInfo = document.getElementById('stats-info');
             const totalIcons = allItems.length;
@@ -526,6 +732,87 @@ class CodiconInspectorPanel {
                 statsInfo.title = \`Showing \${filteredCount} of \${totalIcons} codicons (filtered) - Source: \${sourceText}\`;
             }
         }
+        
+        function updateComparisonCount() {
+            comparisonCount.textContent = comparisonIcons.length;
+            
+            if (comparisonIcons.length === 0) {
+                comparisonArea.classList.add('empty');
+            } else {
+                comparisonArea.classList.remove('empty');
+            }
+        }
+        
+        function addToComparison(iconName) {
+            if (comparisonIcons.length >= MAX_COMPARISON_ICONS) {
+                console.warn('Maximum comparison icons reached');
+                return false;
+            }
+            
+            if (comparisonIcons.includes(iconName)) {
+                console.warn('Icon already in comparison');
+                return false;
+            }
+            
+            comparisonIcons.push(iconName);
+            renderComparisonArea();
+            updateComparisonCount();
+            return true;
+        }
+        
+        function removeFromComparison(iconName) {
+            const index = comparisonIcons.indexOf(iconName);
+            if (index > -1) {
+                comparisonIcons.splice(index, 1);
+                renderComparisonArea();
+                updateComparisonCount();
+            }
+        }
+        
+        function clearComparison() {
+            comparisonIcons = [];
+            renderComparisonArea();
+            updateComparisonCount();
+        }
+        
+        function renderComparisonArea() {
+            comparisonArea.innerHTML = comparisonIcons.map((iconName, index) => \`
+                <i class="codicon codicon-\${iconName} comparison-icon" 
+                   data-icon="\${iconName}" 
+                   data-index="\${index}"
+                   title="\${iconName}" 
+                   draggable="true">
+                    <button class="comparison-icon-remove" onclick="removeFromComparison('\${iconName}')" title="Remove \${iconName}">
+                        ×
+                    </button>
+                </i>
+            \`).join('');
+            
+            // Add drag event listeners to comparison icons
+            addComparisonDragListeners();
+            
+            // Apply current font size to new icons
+            const currentSize = fontSizes[currentSizeIndex];
+            document.querySelectorAll('.comparison-icon').forEach(icon => {
+                icon.style.fontSize = currentSize + 'px';
+            });
+        }
+        
+        function cycleFontSize() {
+            // Cycle to next font size
+            currentSizeIndex = (currentSizeIndex + 1) % fontSizes.length;
+            const newSize = fontSizes[currentSizeIndex];
+            
+            // No need to manage CSS classes anymore
+            
+            // Add new size class
+            // Directly apply font size to all comparison icons\n            document.querySelectorAll('.comparison-icon').forEach(icon => {\n                icon.style.fontSize = newSize + 'px';\n            });
+            
+            // Update button tooltip
+            sizeCycleButton.title = 'Cycle font size (' + newSize + 'px)';
+        }
+        
+
         
         function filterCodicons(searchTerm) {
             const term = searchTerm.toLowerCase().trim().replace(' ', '-');
@@ -590,9 +877,272 @@ class CodiconInspectorPanel {
             filterCodicons(e.target.value);
         });
         
-        // Copy codicon name to clipboard when clicked
+        // Collapsible panel functionality
+        comparisonHeader.addEventListener('click', (e) => {
+            // Don't toggle if clicking on controls
+            if (e.target.closest('.comparison-controls') && !e.target.closest('.chevron')) {
+                return;
+            }
+            comparisonPanel.classList.toggle('collapsed');
+        });
+        
+        // Clear comparison button
+        clearButton.addEventListener('click', clearComparison);
+        
+        // Size cycle button
+        sizeCycleButton.addEventListener('click', cycleFontSize);
+        
+        // Drag and drop functionality
+        function handleDragStart(e) {
+            const iconName = e.target.closest('.size-icon').dataset.codicon;
+            e.dataTransfer.setData('text/plain', iconName);
+            e.target.closest('.size-icon').classList.add('dragging');
+        }
+        
+        function handleDragEnd(e) {
+            e.target.closest('.size-icon').classList.remove('dragging');
+            // Also clean up comparison area drag state
+            comparisonArea.classList.remove('drag-over');
+            document.querySelectorAll('.comparison-icon').forEach(icon => {
+                icon.classList.remove('drag-over');
+            });
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            comparisonArea.classList.add('drag-over');
+        }
+        
+        function handleDragEnter(e) {
+            e.preventDefault();
+            comparisonArea.classList.add('drag-over');
+        }
+        
+        function handleDragLeave(e) {
+            if (!comparisonArea.contains(e.relatedTarget)) {
+                comparisonArea.classList.remove('drag-over');
+            }
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            comparisonArea.classList.remove('drag-over');
+            
+            // Check if this is a reordering operation
+            const reorderData = e.dataTransfer.getData('text/comparison-reorder');
+            if (reorderData) {
+                // This is handled by handleComparisonDrop
+                return;
+            }
+            
+            // This is a new icon being added
+            const iconName = e.dataTransfer.getData('text/plain');
+            if (iconName) {
+                addToComparison(iconName);
+            }
+        }
+        
+        // Add drag event listeners to all size icons
+        document.querySelectorAll('.size-icon').forEach(icon => {
+            icon.addEventListener('dragstart', handleDragStart);
+            icon.addEventListener('dragend', handleDragEnd);
+        });
+        
+        // Add drop event listeners to comparison area
+        comparisonArea.addEventListener('dragover', handleDragOver);
+        comparisonArea.addEventListener('dragenter', handleDragEnter);
+        comparisonArea.addEventListener('dragleave', handleDragLeave);
+        comparisonArea.addEventListener('drop', handleDrop);
+        
+        // Add mouse leave cleanup to comparison area
+        comparisonArea.addEventListener('mouseleave', function(e) {
+            // Clean up any stuck drag-over states when mouse leaves the comparison area
+            setTimeout(() => {
+                comparisonArea.classList.remove('drag-over');
+                document.querySelectorAll('.comparison-icon').forEach(icon => {
+                    icon.classList.remove('drag-over');
+                });
+            }, 50);
+        });
+        
+        // Also add reordering drop support to the comparison area itself
+        comparisonArea.addEventListener('drop', function(e) {
+            // Handle reordering drops that miss individual icons
+            const draggedIndexStr = e.dataTransfer.getData('text/comparison-reorder');
+            if (draggedIndexStr) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const draggedIndex = parseInt(draggedIndexStr);
+                const dropX = e.clientX;
+                const icons = Array.from(document.querySelectorAll('.comparison-icon'));
+                
+                if (icons.length > 0) {
+                    // Find the insertion point based on horizontal position
+                    let targetIndex = icons.length; // Default to end
+                    
+                    for (let i = 0; i < icons.length; i++) {
+                        const rect = icons[i].getBoundingClientRect();
+                        if (dropX < rect.left + rect.width / 2) {
+                            targetIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    // Adjust target index if dragging from before the target
+                    if (draggedIndex < targetIndex) {
+                        targetIndex--;
+                    }
+                    
+                    if (draggedIndex !== targetIndex && draggedIndex >= 0 && targetIndex >= 0) {
+                        const draggedIcon = comparisonIcons[draggedIndex];
+                        comparisonIcons.splice(draggedIndex, 1);
+                        comparisonIcons.splice(targetIndex, 0, draggedIcon);
+                        renderComparisonArea();
+                    }
+                }
+                
+                // Clean up
+                document.querySelectorAll('.comparison-icon').forEach(icon => {
+                    icon.classList.remove('drag-over', 'dragging');
+                });
+            }
+        }, true); // Use capture phase to handle before individual icon handlers
+        
+        // Comparison icon reordering functions
+        function addComparisonDragListeners() {
+            document.querySelectorAll('.comparison-icon').forEach(icon => {
+                icon.addEventListener('dragstart', handleComparisonDragStart);
+                icon.addEventListener('dragend', handleComparisonDragEnd);
+                icon.addEventListener('dragover', handleComparisonDragOver);
+                icon.addEventListener('dragenter', handleComparisonDragEnter);
+                icon.addEventListener('dragleave', handleComparisonDragLeave);
+                icon.addEventListener('drop', handleComparisonDrop);
+            });
+        }
+        
+        function handleComparisonDragStart(e) {
+            const draggedIcon = e.target;
+            const draggedIndex = parseInt(draggedIcon.dataset.index);
+            
+            e.dataTransfer.setData('text/comparison-reorder', draggedIndex.toString());
+            e.dataTransfer.effectAllowed = 'move';
+            draggedIcon.classList.add('dragging');
+            
+            // Prevent event bubbling to avoid triggering main drop area
+            e.stopPropagation();
+        }
+        
+        function handleComparisonDragEnd(e) {
+            e.target.classList.remove('dragging');
+            // Remove drag-over class from all comparison icons and comparison area
+            document.querySelectorAll('.comparison-icon').forEach(icon => {
+                icon.classList.remove('drag-over');
+            });
+            comparisonArea.classList.remove('drag-over');
+        }
+        
+        function handleComparisonDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.stopPropagation(); // Prevent triggering main comparison area dragover
+        }
+        
+        function handleComparisonDragEnter(e) {
+            e.preventDefault();
+            const draggedData = e.dataTransfer.types.includes('text/comparison-reorder');
+            if (draggedData) {
+                // Find the closest comparison icon element
+                const targetIcon = e.target.closest('.comparison-icon');
+                if (targetIcon && !targetIcon.classList.contains('dragging')) {
+                    // Remove drag-over from all other icons first
+                    document.querySelectorAll('.comparison-icon').forEach(icon => {
+                        if (icon !== targetIcon) {
+                            icon.classList.remove('drag-over');
+                        }
+                    });
+                    targetIcon.classList.add('drag-over');
+                }
+            }
+            e.stopPropagation();
+        }
+        
+        function handleComparisonDragLeave(e) {
+            // More forgiving drag leave - use a small timeout to avoid flickering
+            setTimeout(() => {
+                const targetIcon = e.target.closest('.comparison-icon');
+                if (targetIcon) {
+                    // Only remove if we're not hovering over this icon or its children
+                    const rect = targetIcon.getBoundingClientRect();
+                    const isStillHovering = e.clientX >= rect.left && e.clientX <= rect.right && 
+                                          e.clientY >= rect.top && e.clientY <= rect.bottom;
+                    if (!isStillHovering) {
+                        targetIcon.classList.remove('drag-over');
+                    }
+                }
+            }, 10);
+        }
+        
+        function handleComparisonDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const draggedIndexStr = e.dataTransfer.getData('text/comparison-reorder');
+            if (!draggedIndexStr) return; // Not a comparison reorder operation
+            
+            const draggedIndex = parseInt(draggedIndexStr);
+            
+            // Find the target icon more reliably
+            let targetIcon = e.target.closest('.comparison-icon');
+            let targetIndex = targetIcon ? parseInt(targetIcon.dataset.index) : -1;
+            
+            // If we couldn't find a target icon, try to determine position from coordinates
+            if (targetIndex === -1 || isNaN(targetIndex)) {
+                const comparisonIcons = Array.from(document.querySelectorAll('.comparison-icon'));
+                const dropX = e.clientX;
+                
+                // Find the closest icon based on horizontal position
+                let closestIcon = null;
+                let closestDistance = Infinity;
+                
+                comparisonIcons.forEach((icon, index) => {
+                    const rect = icon.getBoundingClientRect();
+                    const iconCenterX = rect.left + rect.width / 2;
+                    const distance = Math.abs(dropX - iconCenterX);
+                    
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestIcon = icon;
+                        targetIndex = index;
+                    }
+                });
+            }
+            
+            if (draggedIndex !== targetIndex && !isNaN(draggedIndex) && !isNaN(targetIndex) && 
+                draggedIndex >= 0 && targetIndex >= 0 && 
+                draggedIndex < comparisonIcons.length && targetIndex < comparisonIcons.length) {
+                
+                // Reorder the icons array
+                const draggedIcon = comparisonIcons[draggedIndex];
+                comparisonIcons.splice(draggedIndex, 1);
+                comparisonIcons.splice(targetIndex, 0, draggedIcon);
+                
+                // Re-render the comparison area
+                renderComparisonArea();
+            }
+            
+            // Clean up drag states
+            document.querySelectorAll('.comparison-icon').forEach(icon => {
+                icon.classList.remove('drag-over', 'dragging');
+            });
+        }
+        
+        // Copy codicon name to clipboard when clicked (existing functionality)
         allItems.forEach(item => {
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (e) => {
+                // Don't trigger click if dragging any size icon
+                if (e.target.closest('.size-icon')) return;
+                
                 const codiconName = item.dataset.name;
                 const codiconCode = \`<i class="codicon codicon-\${codiconName}"></i>\`;
                 
@@ -647,10 +1197,34 @@ class CodiconInspectorPanel {
             console.log('Bounding boxes:', isChecked ? 'enabled' : 'disabled');
         });
         
+        // Initialize
+        updateComparisonCount();
+        // Apply initial font size to any existing icons
+        document.querySelectorAll('.comparison-icon').forEach(icon => {
+            icon.style.fontSize = '16px';
+        });
+        
         // Focus search input on load - use setTimeout to ensure webview is fully loaded
         setTimeout(() => {
             searchInput.focus();
         }, 100);
+        
+        // Add global drag end cleanup as fallback
+        document.addEventListener('dragend', function(e) {
+            // Final cleanup for any stuck states
+            setTimeout(() => {
+                comparisonArea.classList.remove('drag-over');
+                document.querySelectorAll('.comparison-icon').forEach(icon => {
+                    icon.classList.remove('drag-over', 'dragging');
+                });
+                document.querySelectorAll('.size-icon').forEach(icon => {
+                    icon.classList.remove('dragging');
+                });
+            }, 100);
+        });
+        
+        // Make removeFromComparison available globally
+        window.removeFromComparison = removeFromComparison;
     </script>
 </body>
 </html>`;
