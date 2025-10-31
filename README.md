@@ -1,4 +1,4 @@
-# Codicon Inspector 
+# Codicon Inspector
 
 A comprehensive VS Code extension for inspecting and visualizing all available codicons with multi-size rendering and flexible search capabilities.
 
@@ -15,15 +15,18 @@ A comprehensive VS Code extension for inspecting and visualizing all available c
 ## 🚀 Usage
 
 ### Quick Start
+
 1. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
 2. Run **"Show Codicons Inspector"**
 3. Browse, search, and click to copy codicons!
 
 ### Keyboard Shortcut
+
 - **Windows/Linux**: `Ctrl+Alt+I`
 - **macOS**: `Cmd+Alt+I`
 
 ### Search Examples
+
 - `home` → finds home icon
 - `chat sparkle` → finds chat-sparkle icon
 - `file text` → finds file-text icon
@@ -38,11 +41,13 @@ Perfect for codicons developers and contributors:
 1. **Open Settings**: `File > Preferences > Settings`
 2. **Search**: "Codicon Inspector"
 3. **Set Path**: Point "Local Codicons Path" to your codicons repository
-   ```
+
+   ```plaintext
    Example: /Users/yourname/codicons/dist
    ```
 
 This enables:
+
 - Testing unreleased codicons
 - Development workflow integration
 - Real-time icon updates during development
@@ -50,11 +55,13 @@ This enables:
 ## 🛠️ Development
 
 ### Prerequisites
+
 - Node.js 16+
 - VS Code 1.80+
 - Git
 
 ### Setup
+
 ```bash
 # Clone and setup
 git clone https://github.com/mrleemurray/codicon-inspector.git
@@ -66,6 +73,7 @@ npm run compile
 ```
 
 ### Development Workflow
+
 ```bash
 # Watch mode (recommended during development)
 npm run watch
@@ -78,7 +86,8 @@ npm run package
 ```
 
 ### Project Structure
-```
+
+```bash
 ├── src/
 │   ├── extension.ts          # Main extension logic
 │   └── test/                 # Test files
@@ -90,17 +99,20 @@ npm run package
 ## 🔧 Technical Details
 
 ### Font Loading Strategy
+
 1. **Primary**: Local codicons repository (TTF fonts)
 2. **Fallback**: Bundled `@vscode/codicons` package
 3. **Smart Conversion**: Automatic CSS processing for TTF optimization
 
 ### Architecture
+
 - **WebView Panel**: Custom HTML/CSS/JS interface
 - **Dynamic Extraction**: Real-time CSS parsing for icon discovery
 - **Theme Integration**: Full VS Code theme compatibility
 - **Performance Optimized**: Efficient rendering for 500+ icons
 
 ### Icon Extraction Process
+
 1. Locate codicons CSS file (local or bundled)
 2. Parse CSS for `.codicon-*:before` rules
 3. Extract icon names and Unicode characters
@@ -141,5 +153,3 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Community**: For feedback and contributions
 
 ---
-
-**Made with ❤️ for VS Code developers**
