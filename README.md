@@ -1,4 +1,4 @@
-# Codicon Inspector
+# Codicon Inspector 
 
 A comprehensive VS Code extension for inspecting and visualizing all available codicons with multi-size rendering and flexible search capabilities.
 

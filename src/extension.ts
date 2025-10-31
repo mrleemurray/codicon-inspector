@@ -41,10 +41,11 @@ class CodiconInspectorPanel {
         // Get local codicons path from settings
         const config = vscode.workspace.getConfiguration('codicon-inspector');
         const localCodiconsPath = config.get<string>('localCodiconsPath', '');
-        
-        const localResourceRoots = [
+
+        const localResourceRoots: vscode.Uri[] = [
             vscode.Uri.joinPath(extensionUri, 'media'),
-            vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/codicons')
+            vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/codicons'),
+            vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/webview-ui-toolkit')
         ];
         
         // Add local codicons directory to resource roots if specified
@@ -276,7 +277,7 @@ class CodiconInspectorPanel {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Codicon Inspector</title>
-    <script type="module" src="https://unpkg.com/@vscode/webview-ui-toolkit@latest/dist/toolkit.js"></script>
+    <script type="module" src="${this._panel.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'node_modules', '@vscode/webview-ui-toolkit', 'dist', 'toolkit.js'))}"></script>
     <style>
         /* Embedded Codicon CSS */
         ${cssContent}
@@ -601,6 +602,11 @@ class CodiconInspectorPanel {
         
         /* Bounding box styles */
         .show-bounding-boxes .size-icon .codicon {
+            outline: 1px solid var(--vscode-editorError-foreground);
+            outline-offset: 0px;
+        }
+        
+        .show-bounding-boxes .comparison-icon {
             outline: 1px solid var(--vscode-editorError-foreground);
             outline-offset: 0px;
         }
