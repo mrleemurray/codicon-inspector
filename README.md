@@ -2,7 +2,7 @@
 
 A comprehensive VS Code extension for inspecting and visualizing all available codicons with multi-size rendering and flexible search capabilities.
 
-## ✨ Features
+## Features
 
 - **Complete Codicon Library**: Display all ~500 available VS Code codicons
 - **Multi-Size Visualization**: View each icon at 11px, 14px, 16px, and 24px sizes
@@ -12,7 +12,7 @@ A comprehensive VS Code extension for inspecting and visualizing all available c
 - **TTF Font Optimization**: Optimized for TTF font loading and rendering
 - **Real-Time Updates**: Refresh capability to see latest codicon changes
 
-## 🚀 Usage
+## Usage
 
 ### Quick Start
 
@@ -32,7 +32,7 @@ A comprehensive VS Code extension for inspecting and visualizing all available c
 - `file text` → finds file-text icon
 - `search` → finds all search-related icons
 
-## ⚙️ Configuration
+## Configuration
 
 ### Local Codicons Development
 
@@ -52,7 +52,7 @@ This enables:
 - Development workflow integration
 - Real-time icon updates during development
 
-## 🛠️ Development
+## Development
 
 ### Prerequisites
 
@@ -96,7 +96,7 @@ npm run package
 └── README.md                # This file
 ```
 
-## 🔧 Technical Details
+## Technical Details
 
 ### Font Loading Strategy
 
@@ -119,14 +119,14 @@ npm run package
 4. Generate multi-size display grid
 5. Enable search and copy functionality
 
-## 📋 Commands
+## Commands
 
 | Command | Description | Keybinding |
 |---------|-------------|------------|
 | `codicon-inspector.showCodicons` | Show Codicons Inspector | `Ctrl+Alt+I` / `Cmd+Alt+I` |
 | `codicon-inspector.refreshCodicons` | Refresh Codicons | - |
 
-## 🎯 Use Cases
+## Use Cases
 
 - **Web Development**: Find perfect icons for web interfaces
 - **VS Code Extension Development**: Browse available icons for extensions
@@ -134,7 +134,7 @@ npm run package
 - **Codicons Development**: Test and preview new icons
 - **Documentation**: Reference icon names and usage
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
@@ -142,11 +142,11 @@ npm run package
 4. Push to branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **VS Code Team**: For the comprehensive codicons library
 - **Microsoft**: For the excellent VS Code extension API
