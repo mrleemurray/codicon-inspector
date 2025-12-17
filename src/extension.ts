@@ -271,6 +271,23 @@ class CodiconInspectorPanel {
         // Extract codicons from CSS content
         const codicons = this._extractCodiconsFromCSS(cssContent);
 
+        // Read metadata.json
+        let metadata = {};
+        try {
+            const metadataPath = path.join(this._extensionUri.fsPath, 'src', 'metadata.json');
+            if (fs.existsSync(metadataPath)) {
+                metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+            } else {
+                // Try looking in out/metadata.json if running from out
+                const outMetadataPath = path.join(this._extensionUri.fsPath, 'out', 'metadata.json');
+                if (fs.existsSync(outMetadataPath)) {
+                    metadata = JSON.parse(fs.readFileSync(outMetadataPath, 'utf8'));
+                }
+            }
+        } catch (e) {
+            console.error('Failed to read metadata.json', e);
+        }
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -278,6 +295,9 @@ class CodiconInspectorPanel {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Codicon Inspector</title>
     <script type="module" src="${this._panel.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'node_modules', '@vscode/webview-ui-toolkit', 'dist', 'toolkit.js'))}"></script>
+    <script>
+        const metadata = ${JSON.stringify(metadata)};
+    </script>
     <style>
         /* Embedded Codicon CSS */
         ${cssContent}
@@ -821,7 +841,7 @@ class CodiconInspectorPanel {
 
         
         function filterCodicons(searchTerm) {
-            const term = searchTerm.toLowerCase().trim().replace(' ', '-');
+            const term = searchTerm.toLowerCase().trim();
             filteredCount = 0;
             
             console.log('Search term:', term);
@@ -841,6 +861,7 @@ class CodiconInspectorPanel {
                 const name = item.dataset.name.toLowerCase();
                 let matches = false;
                 
+                // 1. Check name match (fuzzy)
                 // Try different variations of the search term
                 const searchVariations = [
                     term,                           // original: "chat sparkle"
@@ -848,13 +869,33 @@ class CodiconInspectorPanel {
                     term.replace(/\s+/g, ''),      // no separators: "chatsparkle"
                 ];
                 
-                // Check if any variation matches
+                // Check if any variation matches the name
                 matches = searchVariations.some(variation => name.includes(variation));
                 
                 // Also check if all words in the search term appear in the name (in any order)
                 if (!matches && term.includes(' ')) {
                     const searchWords = term.split(/\s+/);
                     matches = searchWords.every(word => name.includes(word));
+                }
+
+                // 2. Check metadata match
+                if (!matches && metadata && metadata[name]) {
+                    const data = metadata[name];
+                    
+                    // Check description
+                    if (data.description && data.description.toLowerCase().includes(term)) {
+                        matches = true;
+                    }
+                    
+                    // Check tags
+                    if (!matches && data.tags && Array.isArray(data.tags)) {
+                        matches = data.tags.some(tag => tag.toLowerCase().includes(term));
+                    }
+                    
+                    // Check category
+                    if (!matches && data.category && data.category.toLowerCase().includes(term)) {
+                        matches = true;
+                    }
                 }
                 
                 if (matches) {
