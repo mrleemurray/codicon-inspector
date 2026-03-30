@@ -2,11 +2,20 @@
 
 A comprehensive VS Code extension for inspecting and visualizing all available codicons with multi-size rendering and flexible search capabilities.
 
+## 🌍 Multi-Language Summary
+
+- **English**: Browse all VS Code codicons, preview them at multiple sizes, search quickly, and copy HTML snippets with one click.
+- **Español**: Explora todos los codicons de VS Code, visualízalos en varios tamaños, búscalos rápidamente y copia fragmentos HTML con un clic.
+- **Français** : Parcourez tous les codicons de VS Code, prévisualisez-les en plusieurs tailles, recherchez rapidement et copiez des extraits HTML en un clic.
+- **Deutsch**: Durchsuche alle VS Code-Codicons, sieh sie in mehreren Größen an, finde sie schnell und kopiere HTML-Snippets mit einem Klick.
+- **日本語**: VS Code のすべての Codicon を一覧し、複数サイズでプレビューし、すばやく検索して、ワンクリックで HTML スニペットをコピーできます。
+- **中文（简体）**：浏览所有 VS Code Codicon，支持多尺寸预览、快速搜索，并可一键复制 HTML 代码片段。
+
 ## ✨ Features
 
 - **Complete Codicon Library**: Display all ~500 available VS Code codicons
 - **Multi-Size Visualization**: View each icon at 11px, 14px, 16px, and 24px sizes
-- **Intelligent Search**: Flexible search with space/dash interchangeability (`chat sparkle` finds `chat-sparkle`)
+- **Intelligent Search**: Flexible search with space/dash interchangeability (`chat sparkle` finds `chat-sparkle`) 
 - **One-Click Copy**: Click any icon to copy its HTML code snippet (`<i class="codicon codicon-icon-name"></i>`)
 - **Local Development Support**: Configure path to local codicons repository for development
 - **TTF Font Optimization**: Optimized for TTF font loading and rendering

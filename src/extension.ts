@@ -3,10 +3,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
+    // Primary entrypoint: open/reveal the inspector panel.
+    // Keeping this command tiny helps keep activation fast and deterministic.
     const showCommand = vscode.commands.registerCommand('codicon-inspector.showCodicons', () => {
         CodiconInspectorPanel.createOrShow(context.extensionUri);
     });
 
+    // Explicit refresh command allows re-reading local files/settings without requiring
+    // extension host reload. Useful when iterating on icon/font output during development.
     const refreshCommand = vscode.commands.registerCommand('codicon-inspector.refreshCodicons', () => {
         if (CodiconInspectorPanel.currentPanel) {
             CodiconInspectorPanel.currentPanel.refresh();
@@ -21,6 +25,8 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {}
 
 class CodiconInspectorPanel {
+    // Singleton panel reference: command re-invocation reveals existing stateful webview
+    // instead of creating competing panels.
     public static currentPanel: CodiconInspectorPanel | undefined;
     public static readonly viewType = 'codiconInspector';
 
@@ -29,26 +35,32 @@ class CodiconInspectorPanel {
     private _disposables: vscode.Disposable[] = [];
 
     public static createOrShow(extensionUri: vscode.Uri) {
+        // Prefer current editor column so UI appears near the user's active context.
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
 
         if (CodiconInspectorPanel.currentPanel) {
+            // Preserve existing search/comparison state by reusing current panel instance.
             CodiconInspectorPanel.currentPanel._panel.reveal(column);
             return;
         }
 
-        // Get local codicons path from settings
+        // Optional setting that can point to either a folder or a CSS file used for
+        // local codicon development/testing.
         const config = vscode.workspace.getConfiguration('codicon-inspector');
         const localCodiconsPath = config.get<string>('localCodiconsPath', '');
 
+        // Webviews can only load local resources from declared roots.
+        // These roots must include every path potentially referenced by CSS url(...).
         const localResourceRoots: vscode.Uri[] = [
             vscode.Uri.joinPath(extensionUri, 'media'),
             vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/codicons'),
             vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/webview-ui-toolkit')
         ];
         
-        // Add local codicons directory to resource roots if specified
+        // Extend resource roots based on user-provided location so local font files resolve
+        // correctly in the webview sandbox.
         if (localCodiconsPath && fs.existsSync(localCodiconsPath)) {
             // Check if it's a directory or file
             const stats = fs.statSync(localCodiconsPath);
@@ -60,9 +72,10 @@ class CodiconInspectorPanel {
                     localResourceRoots.push(vscode.Uri.file(parentDir));
                 }
             } else {
-                // It's a file, add its directory
+                // If a CSS file was configured, allow its folder so url(...) assets can resolve.
                 const localDir = path.dirname(localCodiconsPath);
                 localResourceRoots.push(vscode.Uri.file(localDir));
+                // Also allow one level up for builds that emit fonts beside the css folder.
                 const parentDir = path.dirname(localDir);
                 if (parentDir !== localDir) {
                     localResourceRoots.push(vscode.Uri.file(parentDir));
@@ -87,11 +100,14 @@ class CodiconInspectorPanel {
         this._panel = panel;
         this._extensionUri = extensionUri;
 
+        // Initial full render from current filesystem/settings snapshot.
         this._update();
 
+        // Keep lifecycle centralized: when the panel closes, release all subscriptions.
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
         
-        // Handle messages from webview
+        // Narrow message bridge from webview -> extension host.
+        // Keeping command handling explicit avoids accidental overexposure.
         this._panel.webview.onDidReceiveMessage(
             message => {
                 switch (message.command) {
@@ -106,12 +122,16 @@ class CodiconInspectorPanel {
     }
 
     public refresh() {
+        // Refresh currently means complete HTML regeneration so every derived value
+        // (icon list, metadata, source labels) stays in sync with latest files.
         this._update();
     }
 
     public dispose() {
+        // Clear singleton first so future command invocations can recreate panel.
         CodiconInspectorPanel.currentPanel = undefined;
 
+        // Dispose webview panel and all attached disposables to prevent leaks.
         this._panel.dispose();
 
         while (this._disposables.length) {
@@ -123,9 +143,16 @@ class CodiconInspectorPanel {
     }
 
     private _update() {
+        // Render pipeline root: regenerate HTML snapshot and assign in one step.
         this._panel.webview.html = this._getHtmlForWebview();
     }
 
+    /**
+     * Reads bundled codicon stylesheet from extension dependencies.
+     *
+     * Returns a minimal fallback base class when read fails so the webview stays usable
+     * for diagnostics instead of failing with an empty/broken UI.
+     */
     private _getBundledCodiconCSS(): string {
         try {
             const bundledCssPath = path.join(this._extensionUri.fsPath, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css');
@@ -154,10 +181,17 @@ class CodiconInspectorPanel {
         }
     }
 
+    /**
+     * Rewrites CSS url(...) entries to webview-safe resource URIs.
+     *
+     * Relative filesystem URLs do not work directly inside VS Code webviews. This resolver
+     * attempts direct path resolution plus common font output folders, then converts matches
+     * to `asWebviewUri(...)` values.
+     */
     private _fixCssResourcePaths(cssContent: string, cssFilePath: string): string {
         const cssDir = path.dirname(cssFilePath);
         
-        // Replace relative font paths with webview URIs
+        // Replace relative font paths with webview URIs.
         return cssContent.replace(/url\(['"]?([^'")\s]+)['"]?\)/g, (match, relativePath) => {
             if (relativePath.startsWith('http') || relativePath.startsWith('data:')) {
                 // Already absolute or data URL, keep as is
@@ -237,14 +271,16 @@ class CodiconInspectorPanel {
 
     private _getHtmlForWebview(): string {
         
-        // Get local codicons path from settings
+        // Read local codicons setting each render so user configuration updates apply
+        // immediately after refresh.
         const config = vscode.workspace.getConfiguration('codicon-inspector');
         const localCodiconsPath = config.get<string>('localCodiconsPath', '');
         
         let cssContent = '';
         let cssSource = 'bundled';
         
-        // Use local codicons if path is specified and exists
+        // Prefer local codicons when present. This turns the inspector into a live preview
+        // tool for unpublished/experimental icon assets.
         if (localCodiconsPath && fs.existsSync(localCodiconsPath)) {
             try {
                 const cssFilePath = this._findCssFile(localCodiconsPath);
@@ -268,10 +304,11 @@ class CodiconInspectorPanel {
             cssContent = this._getBundledCodiconCSS();
         }
 
-        // Extract codicons from CSS content
+        // Icon name source-of-truth is parsed from active CSS, not a static list.
         const codicons = this._extractCodiconsFromCSS(cssContent);
 
-        // Read metadata.json
+        // Optional metadata enriches search matching with tags/description/category.
+        // Check both src/ and out/ locations for dev and compiled extension modes.
         let metadata = {};
         try {
             const metadataPath = path.join(this._extensionUri.fsPath, 'src', 'metadata.json');
@@ -747,6 +784,8 @@ class CodiconInspectorPanel {
         let filteredCount = allItems.length;
         
         function updateStats() {
+            // Tooltip doubles as compact status bar: it communicates both filter coverage
+            // (shown vs total) and which icon source is active (local/bundled).
             // Update the tooltip with current filter info
             const statsInfo = document.getElementById('stats-info');
             const totalIcons = allItems.length;
@@ -760,6 +799,7 @@ class CodiconInspectorPanel {
         }
         
         function updateComparisonCount() {
+            // Empty class controls the instructional placeholder via CSS pseudo-element.
             comparisonCount.textContent = comparisonIcons.length;
             
             if (comparisonIcons.length === 0) {
@@ -770,6 +810,9 @@ class CodiconInspectorPanel {
         }
         
         function addToComparison(iconName) {
+            // Enforce explicit comparison constraints:
+            // - hard cap for layout/perf stability
+            // - no duplicates to keep visual signal clear
             if (comparisonIcons.length >= MAX_COMPARISON_ICONS) {
                 console.warn('Maximum comparison icons reached');
                 return false;
@@ -802,6 +845,8 @@ class CodiconInspectorPanel {
         }
         
         function renderComparisonArea() {
+            // Rebuild from state array every time to keep DOM/index mapping deterministic
+            // for drag-reorder behavior.
             comparisonArea.innerHTML = comparisonIcons.map((iconName, index) => \`
                 <i class="codicon codicon-\${iconName} comparison-icon" 
                    data-icon="\${iconName}" 
@@ -841,6 +886,10 @@ class CodiconInspectorPanel {
 
         
         function filterCodicons(searchTerm) {
+            // Multi-strategy filter tuned for discoverability, not just exact lookup:
+            // - fuzzy name variants (spaces/dashes/concatenated)
+            // - all-word matching
+            // - metadata fields (description, tags, category)
             const term = searchTerm.toLowerCase().trim();
             filteredCount = 0;
             
@@ -975,6 +1024,7 @@ class CodiconInspectorPanel {
             e.preventDefault();
             comparisonArea.classList.remove('drag-over');
             
+            // Reorder payloads are handled by dedicated reorder logic; skip add path.
             // Check if this is a reordering operation
             const reorderData = e.dataTransfer.getData('text/comparison-reorder');
             if (reorderData) {
@@ -1014,6 +1064,7 @@ class CodiconInspectorPanel {
         
         // Also add reordering drop support to the comparison area itself
         comparisonArea.addEventListener('drop', function(e) {
+            // Handles drops that land between icons by deriving insertion index from X position.
             // Handle reordering drops that miss individual icons
             const draggedIndexStr = e.dataTransfer.getData('text/comparison-reorder');
             if (draggedIndexStr) {
@@ -1072,6 +1123,8 @@ class CodiconInspectorPanel {
             const draggedIcon = e.target;
             const draggedIndex = parseInt(draggedIcon.dataset.index);
             
+            // Use a dedicated drag payload key so internal reorders do not conflict with
+            // grid-origin drags that add new icons.
             e.dataTransfer.setData('text/comparison-reorder', draggedIndex.toString());
             e.dataTransfer.effectAllowed = 'move';
             draggedIcon.classList.add('dragging');
@@ -1115,6 +1168,7 @@ class CodiconInspectorPanel {
         }
         
         function handleComparisonDragLeave(e) {
+            // Delay avoids hover-state flicker caused by nested DOM transitions during drag.
             // More forgiving drag leave - use a small timeout to avoid flickering
             setTimeout(() => {
                 const targetIcon = e.target.closest('.comparison-icon');
@@ -1148,6 +1202,8 @@ class CodiconInspectorPanel {
                 const comparisonIcons = Array.from(document.querySelectorAll('.comparison-icon'));
                 const dropX = e.clientX;
                 
+                // Coordinate fallback improves resilience when event target is not the icon
+                // container (e.g., nested remove button or text node).
                 // Find the closest icon based on horizontal position
                 let closestIcon = null;
                 let closestDistance = Infinity;
@@ -1209,6 +1265,8 @@ class CodiconInspectorPanel {
                 const fontFamily = computedStyle.fontFamily;
                 console.log('Codicon font family:', fontFamily);
                 
+                // Degrade gracefully to text labels when font loading fails so users can still
+                // inspect names and copy generated icon markup.
                 if (fontFamily.indexOf('codicon') === -1) {
                     console.warn('Codicons font not loaded, showing fallback');
                     // Codicons didn't load, show fallback
@@ -1277,10 +1335,16 @@ class CodiconInspectorPanel {
 </html>`;
     }
 
+    /**
+     * Extracts icon names from several codicon CSS variants.
+     *
+     * Codicon output formats can change across build pipelines, so this parser intentionally
+     * combines multiple patterns and de-duplicates into a single normalized set.
+     */
     private _extractCodiconsFromCSS(cssContent: string): string[] {
         const codiconSet = new Set<string>();
         
-        // Pattern 1: Match CSS class selectors like .codicon-icon-name::before or .codicon-icon-name:before
+        // Pattern 1: Classic selector form used by most codicon stylesheets.
         const classRegex = /\.codicon-([a-zA-Z0-9-_]+)::?before/g;
         let match;
         
@@ -1289,28 +1353,28 @@ class CodiconInspectorPanel {
             this._addValidIconName(codiconSet, iconName);
         }
         
-        // Pattern 2: Match icon definitions in CSS variables or content properties
+        // Pattern 2: Explicit glyph content declarations inside before rules.
         const contentRegex = /\.codicon-([a-zA-Z0-9-_]+)::?before\s*\{[^}]*content:\s*["']([^"'\\]+)["']/gs;
         while ((match = contentRegex.exec(cssContent)) !== null) {
             const iconName = match[1];
             this._addValidIconName(codiconSet, iconName);
         }
         
-        // Pattern 3: Match newer CSS format with data attributes
+        // Pattern 3: Attribute-driven codicon declarations.
         const dataRegex = /\[data-codicon="([a-zA-Z0-9-_]+)"\]/g;
         while ((match = dataRegex.exec(cssContent)) !== null) {
             const iconName = match[1];
             this._addValidIconName(codiconSet, iconName);
         }
         
-        // Pattern 4: Match CSS custom properties (CSS variables) that might define icons
+        // Pattern 4: Variable token definitions (e.g. --codicon-name).
         const variableRegex = /--codicon-([a-zA-Z0-9-_]+):/g;
         while ((match = variableRegex.exec(cssContent)) !== null) {
             const iconName = match[1];
             this._addValidIconName(codiconSet, iconName);
         }
         
-        // Convert to sorted array
+        // Sorted output keeps UI order stable across refreshes for easier visual diffing.
         const codicons = Array.from(codiconSet).sort();
         
         console.log(`Extracted ${codicons.length} codicons from CSS`);
@@ -1324,6 +1388,11 @@ class CodiconInspectorPanel {
         return codicons;
     }
 
+    /**
+     * Adds icon name if it appears to be a real codicon identifier.
+     *
+     * CSS may include utility or animation tokens that match regexes but are not icon names.
+     */
     private _addValidIconName(codiconSet: Set<string>, iconName: string): void {
         // Skip generic codicon class, utility classes, and CSS-specific terms
         const skipPatterns = [
@@ -1346,6 +1415,12 @@ class CodiconInspectorPanel {
         }
     }
 
+    /**
+     * Resolves a user-provided path to a concrete CSS file.
+     *
+     * Accepts either direct CSS file paths or directories containing conventional stylesheet
+     * names, then falls back to the first discovered .css file in that directory.
+     */
     private _findCssFile(inputPath: string): string | null {
         try {
             const stats = fs.statSync(inputPath);
@@ -1381,6 +1456,12 @@ class CodiconInspectorPanel {
         return null;
     }
 
+    /**
+     * Rewrites @font-face entries to prefer local TTF fonts.
+     *
+     * This normalizes font references for webview usage where local font availability can
+     * differ from the original build output assumptions.
+     */
     private _convertToTtfFonts(cssContent: string, fontDir: string): string {
         // Find available TTF files in the directory
         const ttfFiles = this._findTtfFiles(fontDir);
@@ -1413,6 +1494,11 @@ class CodiconInspectorPanel {
         });
     }
 
+    /**
+     * Returns TTF files in the given directory.
+     *
+     * Shallow scan is sufficient for expected codicon output layouts and keeps lookup cheap.
+     */
     private _findTtfFiles(dir: string): string[] {
         try {
             const files = fs.readdirSync(dir);
@@ -1423,6 +1509,11 @@ class CodiconInspectorPanel {
         }
     }
 
+    /**
+     * Static fallback icon list used only when CSS extraction yields no icons.
+     *
+     * This prevents an empty UI when local CSS is malformed or in an unsupported format.
+     */
     private _getFallbackCodicons(): string[] {
         // This is a comprehensive list of VS Code codicons as of 2024
         // These are the icon names used with the $(icon-name) syntax
