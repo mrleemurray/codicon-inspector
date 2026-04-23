@@ -54,12 +54,12 @@ async function checkForCodiconUpdates(context: vscode.ExtensionContext): Promise
     }
 }
 
-function fetchLatestNpmVersion(packageName: string): Promise<string> {
+function fetchNpmDistTagVersion(packageName: string, tag: string): Promise<string> {
     return new Promise((resolve, reject) => {
-        const url = `https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`;
+        const url = `https://registry.npmjs.org/${encodeURIComponent(packageName)}/${tag}`;
         https.get(url, { headers: { 'Accept': 'application/json' } }, (res) => {
             if (res.statusCode !== 200) {
-                reject(new Error(`npm registry returned HTTP ${res.statusCode}`));
+                reject(new Error(`npm registry returned HTTP ${res.statusCode} for tag "${tag}"`));
                 res.resume();
                 return;
             }
@@ -71,6 +71,35 @@ function fetchLatestNpmVersion(packageName: string): Promise<string> {
             });
         }).on('error', reject);
     });
+}
+
+/** Compares two semver strings, returning true if `a` is newer than `b`. */
+function isNewerVersion(a: string, b: string): boolean {
+    const parse = (v: string) => v.replace(/[^0-9.-]/g, '').split(/[.-]/).map(Number);
+    const pa = parse(a);
+    const pb = parse(b);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+        if (diff !== 0) { return diff > 0; }
+    }
+    return false;
+}
+
+async function fetchLatestNpmVersion(packageName: string): Promise<string> {
+    const [stableVersion, nextVersion] = await Promise.allSettled([
+        fetchNpmDistTagVersion(packageName, 'latest'),
+        fetchNpmDistTagVersion(packageName, 'next'),
+    ]);
+
+    const stable = stableVersion.status === 'fulfilled' ? stableVersion.value : null;
+    const next   = nextVersion.status   === 'fulfilled' ? nextVersion.value   : null;
+
+    if (stable && next) {
+        return isNewerVersion(next, stable) ? next : stable;
+    }
+    if (stable) { return stable; }
+    if (next)   { return next; }
+    throw new Error('Could not resolve @vscode/codicons version from npm');
 }
 
 function downloadFile(url: string, dest: string): Promise<void> {
