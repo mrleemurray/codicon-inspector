@@ -168,6 +168,12 @@ class CodiconInspectorPanel {
         const storageDir = context.globalStorageUri.fsPath;
         fs.mkdirSync(storageDir, { recursive: true });
         localResourceRoots.push(vscode.Uri.file(storageDir));
+
+        // Allow access to VS Code's own bundled codicons
+        const appRootCodiconsDir = path.join(vscode.env.appRoot, 'node_modules', '@vscode', 'codicons', 'dist');
+        if (fs.existsSync(appRootCodiconsDir)) {
+            localResourceRoots.push(vscode.Uri.file(appRootCodiconsDir));
+        }
         
         // Add local codicons directory to resource roots if specified
         if (localCodiconsPath && fs.existsSync(localCodiconsPath)) {
@@ -253,6 +259,12 @@ class CodiconInspectorPanel {
         const storageDir = this._context.globalStorageUri.fsPath;
         return fs.existsSync(path.join(storageDir, 'codicon.css')) &&
                fs.existsSync(path.join(storageDir, 'codicon.ttf'));
+    }
+
+    /** Returns the path to VS Code's own bundled codicons CSS, or null if not found. */
+    private _getAppRootCodiconsCssPath(): string | null {
+        const cssPath = path.join(vscode.env.appRoot, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css');
+        return fs.existsSync(cssPath) ? cssPath : null;
     }
 
     private _getBundledCodiconCSS(): string {
@@ -393,20 +405,36 @@ class CodiconInspectorPanel {
                 // Fall back to bundled
                 cssContent = this._getBundledCodiconCSS();
             }
-        } else if (this._hasDownloadedCodicons()) {
-            // Use the auto-downloaded latest version from global storage
-            try {
-                const downloadedCssPath = path.join(this._context.globalStorageUri.fsPath, 'codicon.css');
-                const rawCssContent = fs.readFileSync(downloadedCssPath, 'utf8');
-                cssContent = this._fixCssResourcePaths(rawCssContent, downloadedCssPath);
-                const downloadedVersion = this._context.globalState.get<string>('downloadedCodiconVersion', 'latest');
-                cssSource = `v${downloadedVersion} (auto-updated)`;
-            } catch (error) {
-                console.error('Failed to read downloaded codicons, falling back to bundled:', error);
+        } else {
+            // Try VS Code's own installation first — it's always in sync with the running editor
+            const appRootCssPath = this._getAppRootCodiconsCssPath();
+            if (appRootCssPath) {
+                try {
+                    const rawCssContent = fs.readFileSync(appRootCssPath, 'utf8');
+                    cssContent = this._fixCssResourcePaths(rawCssContent, appRootCssPath);
+                    cssSource = 'VS Code installation';
+                } catch (error) {
+                    console.error('Failed to read VS Code appRoot codicons, falling back:', error);
+                }
+            }
+
+            // If appRoot didn't work, try the auto-downloaded npm version
+            if (!cssContent && this._hasDownloadedCodicons()) {
+                try {
+                    const downloadedCssPath = path.join(this._context.globalStorageUri.fsPath, 'codicon.css');
+                    const rawCssContent = fs.readFileSync(downloadedCssPath, 'utf8');
+                    cssContent = this._fixCssResourcePaths(rawCssContent, downloadedCssPath);
+                    const downloadedVersion = this._context.globalState.get<string>('downloadedCodiconVersion', 'latest');
+                    cssSource = `v${downloadedVersion} (auto-updated)`;
+                } catch (error) {
+                    console.error('Failed to read downloaded codicons, falling back to bundled:', error);
+                }
+            }
+
+            // Last resort: bundled codicons shipped with the extension
+            if (!cssContent) {
                 cssContent = this._getBundledCodiconCSS();
             }
-        } else {
-            cssContent = this._getBundledCodiconCSS();
         }
 
         // Extract codicons from CSS content
