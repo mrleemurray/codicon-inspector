@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as https from 'https';
+import * as http from 'http';
 
 export function activate(context: vscode.ExtensionContext) {
     const showCommand = vscode.commands.registerCommand('codicon-inspector.showCodicons', () => {
-        CodiconInspectorPanel.createOrShow(context.extensionUri);
+        CodiconInspectorPanel.createOrShow(context);
     });
 
     const refreshCommand = vscode.commands.registerCommand('codicon-inspector.refreshCodicons', () => {
@@ -16,9 +18,92 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(showCommand, refreshCommand);
+
+    // Check for latest codicons in the background — no await so activation is non-blocking
+    checkForCodiconUpdates(context).catch(err => {
+        console.log('Codicon auto-update skipped:', err.message);
+    });
 }
 
 export function deactivate() {}
+
+// ---------------------------------------------------------------------------
+// Auto-update helpers
+// ---------------------------------------------------------------------------
+
+async function checkForCodiconUpdates(context: vscode.ExtensionContext): Promise<void> {
+    const latestVersion = await fetchLatestNpmVersion('@vscode/codicons');
+    const cachedVersion = context.globalState.get<string>('downloadedCodiconVersion');
+
+    if (latestVersion === cachedVersion) {
+        return; // already on the latest version
+    }
+
+    const storageDir = context.globalStorageUri.fsPath;
+    fs.mkdirSync(storageDir, { recursive: true });
+
+    const base = `https://unpkg.com/@vscode/codicons@${latestVersion}/dist`;
+    await downloadFile(`${base}/codicon.css`, path.join(storageDir, 'codicon.css'));
+    await downloadFile(`${base}/codicon.ttf`, path.join(storageDir, 'codicon.ttf'));
+
+    await context.globalState.update('downloadedCodiconVersion', latestVersion);
+
+    // Refresh panel if it is already open so users see new icons immediately
+    if (CodiconInspectorPanel.currentPanel) {
+        CodiconInspectorPanel.currentPanel.refresh();
+    }
+}
+
+function fetchLatestNpmVersion(packageName: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const url = `https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`;
+        https.get(url, { headers: { 'Accept': 'application/json' } }, (res) => {
+            if (res.statusCode !== 200) {
+                reject(new Error(`npm registry returned HTTP ${res.statusCode}`));
+                res.resume();
+                return;
+            }
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => {
+                try { resolve(JSON.parse(data).version); }
+                catch (e) { reject(e); }
+            });
+        }).on('error', reject);
+    });
+}
+
+function downloadFile(url: string, dest: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const tmp = dest + '.tmp';
+        const file = fs.createWriteStream(tmp);
+
+        const get = url.startsWith('https') ? https.get : http.get;
+        const req = get(url, (res) => {
+            // Follow redirects (unpkg.com uses them)
+            if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                file.close(() => fs.unlink(tmp, () => {}));
+                downloadFile(res.headers.location as string, dest).then(resolve).catch(reject);
+                return;
+            }
+            if (res.statusCode !== 200) {
+                file.close(() => fs.unlink(tmp, () => {}));
+                reject(new Error(`HTTP ${res.statusCode} downloading ${url}`));
+                return;
+            }
+            res.pipe(file);
+            file.on('finish', () => {
+                file.close(() => {
+                    fs.rename(tmp, dest, (err) => { if (err) { reject(err); } else { resolve(); } });
+                });
+            });
+        });
+        req.on('error', (err) => {
+            file.close(() => fs.unlink(tmp, () => {}));
+            reject(err);
+        });
+    });
+}
 
 class CodiconInspectorPanel {
     public static currentPanel: CodiconInspectorPanel | undefined;
@@ -26,9 +111,11 @@ class CodiconInspectorPanel {
 
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
+    private readonly _context: vscode.ExtensionContext;
     private _disposables: vscode.Disposable[] = [];
 
-    public static createOrShow(extensionUri: vscode.Uri) {
+    public static createOrShow(context: vscode.ExtensionContext) {
+        const extensionUri = context.extensionUri;
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
@@ -47,6 +134,11 @@ class CodiconInspectorPanel {
             vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/codicons'),
             vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/webview-ui-toolkit')
         ];
+
+        // Allow the webview to load auto-downloaded codicon files from global storage
+        const storageDir = context.globalStorageUri.fsPath;
+        fs.mkdirSync(storageDir, { recursive: true });
+        localResourceRoots.push(vscode.Uri.file(storageDir));
         
         // Add local codicons directory to resource roots if specified
         if (localCodiconsPath && fs.existsSync(localCodiconsPath)) {
@@ -80,12 +172,13 @@ class CodiconInspectorPanel {
             }
         );
 
-        CodiconInspectorPanel.currentPanel = new CodiconInspectorPanel(panel, extensionUri);
+        CodiconInspectorPanel.currentPanel = new CodiconInspectorPanel(panel, context);
     }
 
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+    private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
         this._panel = panel;
-        this._extensionUri = extensionUri;
+        this._context = context;
+        this._extensionUri = context.extensionUri;
 
         this._update();
 
@@ -124,6 +217,13 @@ class CodiconInspectorPanel {
 
     private _update() {
         this._panel.webview.html = this._getHtmlForWebview();
+    }
+
+    /** Returns true when auto-downloaded codicon files are present in global storage. */
+    private _hasDownloadedCodicons(): boolean {
+        const storageDir = this._context.globalStorageUri.fsPath;
+        return fs.existsSync(path.join(storageDir, 'codicon.css')) &&
+               fs.existsSync(path.join(storageDir, 'codicon.ttf'));
     }
 
     private _getBundledCodiconCSS(): string {
@@ -262,6 +362,18 @@ class CodiconInspectorPanel {
             } catch (error) {
                 console.error('Failed to read local codicons:', error);
                 // Fall back to bundled
+                cssContent = this._getBundledCodiconCSS();
+            }
+        } else if (this._hasDownloadedCodicons()) {
+            // Use the auto-downloaded latest version from global storage
+            try {
+                const downloadedCssPath = path.join(this._context.globalStorageUri.fsPath, 'codicon.css');
+                const rawCssContent = fs.readFileSync(downloadedCssPath, 'utf8');
+                cssContent = this._fixCssResourcePaths(rawCssContent, downloadedCssPath);
+                const downloadedVersion = this._context.globalState.get<string>('downloadedCodiconVersion', 'latest');
+                cssSource = `v${downloadedVersion} (auto-updated)`;
+            } catch (error) {
+                console.error('Failed to read downloaded codicons, falling back to bundled:', error);
                 cssContent = this._getBundledCodiconCSS();
             }
         } else {

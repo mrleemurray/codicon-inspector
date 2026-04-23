@@ -5,6 +5,14 @@ All notable changes to the Codicon Inspector extension will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8] - 2026-04-23
+
+### Added
+
+- **Auto-update codicons**: The extension now checks for the latest `@vscode/codicons` package on npm each time it activates and silently downloads any newer version to local storage. This means new icons are available automatically without needing to update the extension itself.
+- The source label in the inspector stats now shows the downloaded version number (e.g. `v0.0.42 (auto-updated)`) so it is clear which version is in use.
+- Graceful fallback: if the network is unavailable the bundled codicons are used as normal.
+
 ## [0.0.1] - 2025-10-14
 
 ### Added
