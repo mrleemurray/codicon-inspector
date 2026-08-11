@@ -50,8 +50,7 @@ The inspector header will show:
 
 ### 3. Refresh Changes
 When you update your local codicons:
-- Click the "Refresh" button in the inspector
-- Or run "Refresh Codicons" from Command Palette
+- Run "Refresh Codicons" from Command Palette
 - Or close/reopen the inspector
 
 ## Development Workflow
@@ -72,7 +71,7 @@ Set the path to your built codicons folder:
 ### 3. Test Changes
 1. Make changes to your codicon designs
 2. Build your codicons repo (`npm run build`)
-3. Click "Refresh" in the inspector
+3. Run "Refresh Codicons" from Command Palette
 4. See your changes immediately
 
 ## Benefits
@@ -102,7 +101,7 @@ Set the path to your built codicons folder:
 ### Icons Not Loading
 - Verify the CSS file is valid
 - Check browser dev tools for errors
-- Try the refresh button
+- Run "Refresh Codicons" from Command Palette
 - Fallback to bundled version automatically
 
 ### File Watching (Future)

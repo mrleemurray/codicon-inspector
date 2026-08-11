@@ -213,18 +213,6 @@ class CodiconInspectorPanel {
 
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
         
-        // Handle messages from webview
-        this._panel.webview.onDidReceiveMessage(
-            message => {
-                switch (message.command) {
-                    case 'refresh':
-                        this.refresh();
-                        break;
-                }
-            },
-            null,
-            this._disposables
-        );
     }
 
     public refresh() {
@@ -794,9 +782,6 @@ class CodiconInspectorPanel {
                 <vscode-checkbox id="bounding-box-toggle">
                     Show Bounding Boxes
                 </vscode-checkbox>
-                <vscode-button id="refresh-button">
-                    Refresh
-                </vscode-button>
             </div>
         </div>
     </div>
@@ -1362,12 +1347,6 @@ class CodiconInspectorPanel {
                 }
             }
         }, 1000);
-        
-        // Refresh button functionality
-        const refreshButton = document.getElementById('refresh-button');
-        refreshButton.addEventListener('click', () => {
-            vscode.postMessage({ command: 'refresh' });
-        });
         
         // Bounding box toggle functionality
         const boundingBoxToggle = document.getElementById('bounding-box-toggle');
