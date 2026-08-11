@@ -704,12 +704,8 @@ class CodiconInspectorPanel {
             min-height: 24px;
         }
         
-        .size-icon.size-11 .codicon {
-            font-size: 11px !important;
-        }
-        
-        .size-icon.size-14 .codicon {
-            font-size: 14px !important;
+        .size-icon.size-12 .codicon {
+            font-size: 12px !important;
         }
         
         .size-icon.size-16 .codicon {
@@ -817,16 +813,10 @@ class CodiconInspectorPanel {
                 <div class="codicon-display">
                     <div class="size-row">
                         <div class="size-sample">
-                            <div class="size-icon size-11" draggable="true" data-codicon="${codicon}">
+                            <div class="size-icon size-12" draggable="true" data-codicon="${codicon}">
                                 <i class="codicon codicon-${codicon}"></i>
                             </div>
-                            <span class="size-label">11px</span>
-                        </div>
-                        <div class="size-sample">
-                            <div class="size-icon size-14" draggable="true" data-codicon="${codicon}">
-                                <i class="codicon codicon-${codicon}"></i>
-                            </div>
-                            <span class="size-label">14px</span>
+                            <span class="size-label">12px</span>
                         </div>
                         <div class="size-sample">
                             <div class="size-icon size-16" draggable="true" data-codicon="${codicon}">
@@ -867,8 +857,8 @@ class CodiconInspectorPanel {
         const MAX_COMPARISON_ICONS = 30;
         
         // Font size cycling
-        const fontSizes = [11, 14, 16, 24];
-        let currentSizeIndex = 2; // Start with 16px
+        const fontSizes = [12, 16, 24];
+        let currentSizeIndex = 1; // Start with 16px
         
         let filteredCount = allItems.length;
         
