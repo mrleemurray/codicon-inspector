@@ -2,6 +2,12 @@
 
 A comprehensive VS Code extension for inspecting and visualizing all available codicons with multi-size rendering and flexible search capabilities.
 
+> **Did you know?**
+>
+> - Codicons began as the icon font for Visual Studio Code.
+> - Their public repository dates back to 2019.
+> - Each icon starts as an SVG and is built into a font, with a friendly CSS class name mapped to its Unicode character.
+
 ## ✨ Features
 
 - **Complete Codicon Library**: Display all ~500 available VS Code codicons
