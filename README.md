@@ -10,7 +10,7 @@ A comprehensive VS Code extension for inspecting and visualizing all available c
 - **One-Click Copy**: Click any icon to copy its HTML code snippet (`<i class="codicon codicon-icon-name"></i>`)
 - **Local Development Support**: Configure path to local codicons repository for development
 - **TTF Font Optimization**: Optimized for TTF font loading and rendering
-- **Real-Time Updates**: Refresh capability to see latest codicon changes
+- **Real-Time Updates**: Optionally refresh the inspector automatically when local codicon files change
 
 ## 🚀 Usage
 
@@ -50,7 +50,7 @@ This enables:
 
 - Testing unreleased codicons
 - Development workflow integration
-- Real-time icon updates during development
+- Real-time icon updates during development when **Enable Auto Refresh** is turned on
 
 ## 🛠️ Development
 
