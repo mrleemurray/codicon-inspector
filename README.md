@@ -7,6 +7,7 @@ A comprehensive VS Code extension for inspecting and visualizing all available c
 > - Codicons began as the icon font for Visual Studio Code.
 > - Their public repository dates back to 2019.
 > - Each icon starts as an SVG and is built into a font, with a friendly CSS class name mapped to its Unicode character.
+> - The icons are shared under a Creative Commons license, so anyone can use them in their own projects.
 
 ## ✨ Features
 
