@@ -783,7 +783,7 @@ class CodiconInspectorPanel {
     </div>
 
     <!-- Comparison Panel -->
-    <div class="comparison-panel" id="comparison-panel">
+    <div class="comparison-panel collapsed" id="comparison-panel">
         <div class="comparison-header" id="comparison-header">
             <div class="comparison-title">
                 <i class="codicon codicon-compare"></i>
