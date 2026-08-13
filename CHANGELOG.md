@@ -5,6 +5,12 @@ All notable changes to the Codicon Inspector extension will be documented in thi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Local codicon auto-refresh**: Enabling `codicon-inspector.enableAutoRefresh` now watches the configured local CSS and font files and refreshes the open inspector after changes.
+
 ## [0.0.8] - 2026-04-23
 
 ### Added
