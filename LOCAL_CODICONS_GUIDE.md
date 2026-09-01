@@ -11,7 +11,7 @@ Open VS Code settings and configure:
 ```json
 {
   "codicon-inspector.localCodiconsPath": "/path/to/your/codicons/dist",
-  "codicon-inspector.enableAutoRefresh": false
+  "codicon-inspector.enableAutoRefresh": true
 }
 ```
 
@@ -50,8 +50,8 @@ The inspector header will show:
 
 ### 3. Refresh Changes
 When you update your local codicons:
-- Run "Refresh Codicons" from Command Palette
-- Or close/reopen the inspector
+- Enable "Auto Refresh" to update the open inspector whenever CSS or font files change
+- Or run "Refresh Codicons" from Command Palette for a manual refresh
 
 ## Development Workflow
 
@@ -104,11 +104,8 @@ Set the path to your built codicons folder:
 - Run "Refresh Codicons" from Command Palette
 - Fallback to bundled version automatically
 
-### File Watching (Future)
-Currently manual refresh is required. Future versions may include:
-- Automatic file watching
-- Hot reload capability
-- Build integration
+### File Watching
+When `codicon-inspector.enableAutoRefresh` is enabled, the inspector watches CSS and font files in the configured local directory. Changes are debounced so builds that write several files only trigger one refresh.
 
 ## Commands Available
 

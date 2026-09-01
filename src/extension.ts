@@ -149,6 +149,9 @@ class CodiconInspectorPanel {
     private readonly _extensionUri: vscode.Uri;
     private readonly _context: vscode.ExtensionContext;
     private _disposables: vscode.Disposable[] = [];
+    private _localCodiconsWatcher: vscode.FileSystemWatcher | undefined;
+    private _watcherDisposables: vscode.Disposable[] = [];
+    private _refreshTimeout: ReturnType<typeof setTimeout> | undefined;
 
     public static createOrShow(context: vscode.ExtensionContext) {
         const extensionUri = context.extensionUri;
@@ -161,50 +164,13 @@ class CodiconInspectorPanel {
             return;
         }
 
-        // Get local codicons path from settings
-        const config = vscode.workspace.getConfiguration('codicon-inspector');
-        const localCodiconsPath = config.get<string>('localCodiconsPath', '');
-
-        const localResourceRoots: vscode.Uri[] = [
-            vscode.Uri.joinPath(extensionUri, 'media'),
-            vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/codicons'),
-            vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/webview-ui-toolkit')
-        ];
-
-        // Allow the webview to load auto-downloaded codicon files from global storage
-        const storageDir = context.globalStorageUri.fsPath;
-        fs.mkdirSync(storageDir, { recursive: true });
-        localResourceRoots.push(vscode.Uri.file(storageDir));
-        
-        // Add local codicons directory to resource roots if specified
-        if (localCodiconsPath && fs.existsSync(localCodiconsPath)) {
-            // Check if it's a directory or file
-            const stats = fs.statSync(localCodiconsPath);
-            if (stats.isDirectory()) {
-                // It's a directory, add it and parent for font access
-                localResourceRoots.push(vscode.Uri.file(localCodiconsPath));
-                const parentDir = path.dirname(localCodiconsPath);
-                if (parentDir !== localCodiconsPath) {
-                    localResourceRoots.push(vscode.Uri.file(parentDir));
-                }
-            } else {
-                // It's a file, add its directory
-                const localDir = path.dirname(localCodiconsPath);
-                localResourceRoots.push(vscode.Uri.file(localDir));
-                const parentDir = path.dirname(localDir);
-                if (parentDir !== localDir) {
-                    localResourceRoots.push(vscode.Uri.file(parentDir));
-                }
-            }
-        }
-
         const panel = vscode.window.createWebviewPanel(
             CodiconInspectorPanel.viewType,
             'Codicon Inspector',
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
-                localResourceRoots: localResourceRoots
+                localResourceRoots: CodiconInspectorPanel._getLocalResourceRoots(context)
             }
         );
 
@@ -219,7 +185,26 @@ class CodiconInspectorPanel {
         this._update();
 
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-        
+        vscode.workspace.onDidChangeConfiguration(event => {
+            const pathChanged = event.affectsConfiguration('codicon-inspector.localCodiconsPath');
+            const autoRefreshChanged = event.affectsConfiguration('codicon-inspector.enableAutoRefresh');
+
+            if (!pathChanged && !autoRefreshChanged) {
+                return;
+            }
+
+            if (pathChanged) {
+                this._panel.webview.options = {
+                    enableScripts: true,
+                    localResourceRoots: CodiconInspectorPanel._getLocalResourceRoots(this._context)
+                };
+                this._update();
+            }
+
+            this._configureLocalCodiconsWatcher();
+        }, null, this._disposables);
+
+        this._configureLocalCodiconsWatcher();
     }
 
     public refresh() {
@@ -229,6 +214,7 @@ class CodiconInspectorPanel {
     public dispose() {
         CodiconInspectorPanel.currentPanel = undefined;
 
+        this._disposeLocalCodiconsWatcher();
         this._panel.dispose();
 
         while (this._disposables.length) {
@@ -236,6 +222,87 @@ class CodiconInspectorPanel {
             if (x) {
                 x.dispose();
             }
+        }
+    }
+
+    private static _getLocalResourceRoots(context: vscode.ExtensionContext): vscode.Uri[] {
+        const extensionUri = context.extensionUri;
+        const localResourceRoots = [
+            vscode.Uri.joinPath(extensionUri, 'media'),
+            vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/codicons'),
+            vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode/webview-ui-toolkit')
+        ];
+
+        const storageDir = context.globalStorageUri.fsPath;
+        fs.mkdirSync(storageDir, { recursive: true });
+        localResourceRoots.push(vscode.Uri.file(storageDir));
+
+        const localCodiconsPath = vscode.workspace
+            .getConfiguration('codicon-inspector')
+            .get<string>('localCodiconsPath', '');
+
+        if (!localCodiconsPath || !fs.existsSync(localCodiconsPath)) {
+            return localResourceRoots;
+        }
+
+        const stats = fs.statSync(localCodiconsPath);
+        const localDir = stats.isDirectory() ? localCodiconsPath : path.dirname(localCodiconsPath);
+        localResourceRoots.push(vscode.Uri.file(localDir));
+
+        const parentDir = path.dirname(localDir);
+        if (parentDir !== localDir) {
+            localResourceRoots.push(vscode.Uri.file(parentDir));
+        }
+
+        return localResourceRoots;
+    }
+
+    private _configureLocalCodiconsWatcher(): void {
+        this._disposeLocalCodiconsWatcher();
+
+        const config = vscode.workspace.getConfiguration('codicon-inspector');
+        const autoRefreshEnabled = config.get<boolean>('enableAutoRefresh', false);
+        const localCodiconsPath = config.get<string>('localCodiconsPath', '');
+
+        if (!autoRefreshEnabled || !localCodiconsPath || !fs.existsSync(localCodiconsPath)) {
+            return;
+        }
+
+        const stats = fs.statSync(localCodiconsPath);
+        const watchDirectory = stats.isDirectory() ? localCodiconsPath : path.dirname(localCodiconsPath);
+        const pattern = new vscode.RelativePattern(watchDirectory, '*.{css,ttf,woff,woff2}');
+        this._localCodiconsWatcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+        const scheduleRefresh = () => this._scheduleLocalCodiconsRefresh();
+        this._watcherDisposables.push(
+            this._localCodiconsWatcher.onDidChange(scheduleRefresh),
+            this._localCodiconsWatcher.onDidCreate(scheduleRefresh),
+            this._localCodiconsWatcher.onDidDelete(scheduleRefresh)
+        );
+    }
+
+    private _scheduleLocalCodiconsRefresh(): void {
+        if (this._refreshTimeout) {
+            clearTimeout(this._refreshTimeout);
+        }
+
+        this._refreshTimeout = setTimeout(() => {
+            this._refreshTimeout = undefined;
+            this.refresh();
+        }, 200);
+    }
+
+    private _disposeLocalCodiconsWatcher(): void {
+        if (this._refreshTimeout) {
+            clearTimeout(this._refreshTimeout);
+            this._refreshTimeout = undefined;
+        }
+
+        this._localCodiconsWatcher?.dispose();
+        this._localCodiconsWatcher = undefined;
+
+        while (this._watcherDisposables.length) {
+            this._watcherDisposables.pop()?.dispose();
         }
     }
 

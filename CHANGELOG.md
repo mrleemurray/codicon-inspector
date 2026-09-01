@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added a **Codicons** status bar button that opens the Codicon Inspector panel.
+- **Local codicon auto-refresh**: Enabling `codicon-inspector.enableAutoRefresh` now watches the configured local CSS and font files and refreshes the open inspector after changes.
 
 ## [0.0.8] - 2026-04-23
 
