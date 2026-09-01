@@ -17,7 +17,14 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    context.subscriptions.push(showCommand, refreshCommand);
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBarItem.name = 'Codicon Inspector';
+    statusBarItem.text = '$(symbol-interface) Codicons';
+    statusBarItem.tooltip = 'Open Codicon Inspector';
+    statusBarItem.command = 'codicon-inspector.showCodicons';
+    statusBarItem.show();
+
+    context.subscriptions.push(showCommand, refreshCommand, statusBarItem);
 
     // Check for latest codicons in the background — no await so activation is non-blocking
     checkForCodiconUpdates(context).catch(err => {
