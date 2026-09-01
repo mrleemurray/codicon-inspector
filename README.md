@@ -17,13 +17,17 @@ A comprehensive VS Code extension for inspecting and visualizing all available c
 ### Quick Start
 
 1. Open Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
-2. Run **"Show Codicons Inspector"**
+2. Run **"Show Codicons Inspector"** (or click the **Codicons** status bar button)
 3. Browse, search, and click to copy codicons!
 
 ### Keyboard Shortcut
 
 - **Windows/Linux**: `Ctrl+Alt+I`
 - **macOS**: `Cmd+Alt+I`
+
+### Status Bar Button
+
+- Click the **Codicons** button in the status bar to open the inspector instantly.
 
 ### Search Examples
 
