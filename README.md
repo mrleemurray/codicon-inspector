@@ -97,6 +97,7 @@ Compile and lint changes before packaging or opening a pull request:
 ```bash
 npm run compile
 npm run lint
+npm test
 ```
 
 ### Project Structure
