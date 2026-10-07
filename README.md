@@ -90,6 +90,15 @@ npm run watch
 npm run package
 ```
 
+### Validation
+
+Compile and lint changes before packaging or opening a pull request:
+
+```bash
+npm run compile
+npm run lint
+```
+
 ### Project Structure
 
 ```bash
