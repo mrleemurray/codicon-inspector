@@ -17,7 +17,14 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    context.subscriptions.push(showCommand, refreshCommand);
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBarItem.name = 'Codicon Inspector';
+    statusBarItem.text = '$(symbol-interface) Codicons';
+    statusBarItem.tooltip = 'Open Codicon Inspector';
+    statusBarItem.command = 'codicon-inspector.showCodicons';
+    statusBarItem.show();
+
+    context.subscriptions.push(showCommand, refreshCommand, statusBarItem);
 
     // Check for latest codicons in the background — no await so activation is non-blocking
     checkForCodiconUpdates(context).catch(err => {
@@ -864,10 +871,10 @@ class CodiconInspectorPanel {
                 <vscode-button appearance="icon" id="clear-comparison" title="Clear all icons">
                     <i class="codicon codicon-clear-all"></i>
                 </vscode-button>
-                <i class="codicon codicon-chevron-down chevron" id="comparison-chevron"></i>
+                <i class="codicon codicon-chevron-down chevron"></i>
             </div>
         </div>
-        <div class="comparison-content" id="comparison-content">
+        <div class="comparison-content">
             <div class="comparison-area empty" id="comparison-area">
                 <!-- Comparison icons will be added here -->
             </div>
@@ -913,10 +920,8 @@ class CodiconInspectorPanel {
         // Comparison functionality
         const comparisonPanel = document.getElementById('comparison-panel');
         const comparisonHeader = document.getElementById('comparison-header');
-        const comparisonContent = document.getElementById('comparison-content');
         const comparisonArea = document.getElementById('comparison-area');
         const comparisonCount = document.getElementById('comparison-count');
-        const comparisonChevron = document.getElementById('comparison-chevron');
         const clearButton = document.getElementById('clear-comparison');
         const sizeCycleButton = document.getElementById('size-cycle');
         
@@ -1108,12 +1113,12 @@ class CodiconInspectorPanel {
         });
         
         // Collapsible panel functionality
-        comparisonHeader.addEventListener('click', (e) => {
-            // Don't toggle if clicking on controls
-            if (e.target.closest('.comparison-controls') && !e.target.closest('.chevron')) {
-                return;
-            }
+        comparisonHeader.addEventListener('click', () => {
             comparisonPanel.classList.toggle('collapsed');
+        });
+
+        comparisonHeader.querySelector('.comparison-controls').addEventListener('click', (e) => {
+            e.stopPropagation();
         });
         
         // Clear comparison button
